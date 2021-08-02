@@ -64,6 +64,7 @@ class SmartNetworkThermometer (threading.Thread) :
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
                         self.serverSocket.sendto(self.tokens[-1].encode("utf-8"), addr)
                         #print (self.tokens[-1])
+                    #else: return generic message "Incorrect password!" for user experience
                 elif cs[0] == "LOGOUT":
                     if cs[1] in self.tokens :
                         self.tokens.remove(cs[1])
