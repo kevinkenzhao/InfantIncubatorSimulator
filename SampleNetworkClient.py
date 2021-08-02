@@ -44,7 +44,7 @@ class SimpleNetworkClient :
         m = msg.decode("utf-8")
         return (float(m))
 
-    def authenticate(self, p, pw) :
+    def authenticate(self, p, pw) : #credentials sent in plaintext!
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))
         msg, addr = s.recvfrom(1024)
