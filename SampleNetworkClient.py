@@ -39,14 +39,15 @@ class SimpleNetworkClient :
 
     def getTemperatureFromPort(self, p, tok) :
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        s.sendto(b"%s;GET_TEMP" % tok, ("127.0.0.1", p))
+        s.sendto(b"%s;GET_TEMP" % tok, ("127.0.0.1", p)) # OK - token used for get temp operation
         msg, addr = s.recvfrom(1024)
         m = msg.decode("utf-8")
         return (float(m))
 
     def authenticate(self, p, pw) : #credentials sent in plaintext!
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))
+        s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p)) 
+        # current authentication process allows anyone with knowledge of the secret to execute some task on the incubator, but server does not prompt for identity. 
         msg, addr = s.recvfrom(1024)
         return msg.strip()
 
