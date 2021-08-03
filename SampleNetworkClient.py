@@ -9,7 +9,7 @@ class SimpleNetworkClient :
         self.fig, self.ax = plt.subplots()
         now = time.time()
         self.lastTime = now
-        self.times = [time.strftime("%H:%M:%S", time.localtime(now-i)) for i in range(30, 0, -1)]
+        self.times = [time.strftime("%H:%M:%S", time.localtime(now-i)) for i in range(30, 0, -1)] #prints out last 30 seconds in %H:%M:%S format
         self.infTemps = [0]*30
         self.incTemps = [0]*30
         self.infLn, = plt.plot(range(30), self.infTemps, label="Infant Temperature")
