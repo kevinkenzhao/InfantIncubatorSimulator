@@ -40,6 +40,7 @@ class SimpleNetworkClient :
     def getTemperatureFromPort(self, p, tok) :
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         s.sendto(b"%s;GET_TEMP" % tok, ("127.0.0.1", p)) # OK - token used for get temp operation
+        #ensure command arrives to server unmodified using HMAC
         msg, addr = s.recvfrom(1024)
         m = msg.decode("utf-8")
         return (float(m))
