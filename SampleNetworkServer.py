@@ -59,7 +59,7 @@ class SmartNetworkThermometer (threading.Thread) :
             if len(cs) == 2 : #should be either AUTH or LOGOUT
                 if cs[0] == "AUTH":
                     if cs[1] == "!Q#E%T&U8i6y4r2w" :
-                        #password should not be hardcoded in server script
+                        #password should not be hardcoded in server script; use env variable
                         self.tokens.append(''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))) 
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
                         self.serverSocket.sendto(self.tokens[-1].encode("utf-8"), addr)
@@ -90,6 +90,7 @@ class SmartNetworkThermometer (threading.Thread) :
                 msg, addr = self.serverSocket.recvfrom(1024)
                 msg = msg.decode("utf-8").strip()
                 cmds = msg.split(' ')
+                #decrypt commands here
                 if len(cmds) == 1 : # protected commands case
                     semi = msg.find(';')
                     if semi != -1 : #if we found the semicolon
