@@ -77,13 +77,13 @@ class SimpleNetworkClient :
         self.incLn.set_data(range(30), self.incTemps)
         return self.incLn,
     
-    def scrypt_PBKDF(self, pw) : #generate key used for AES encryption from password
+    def scrypt_PBKDF(self, pw) : #generate key used for AES encryption from password https://pycryptodome.readthedocs.io/en/latest/src/protocol/kdf.html
         pw = bytes(pw, 'utf-8')
         salt = get_random_bytes(16)
         key = scrypt(pw, salt, 16, N=2**14, r=8, p=1)
         return key
 
-    def AES_encrypt(self, key, command) : #encrypt command to server using key derived from scrypt_PBKDF
+    def AES_encrypt(self, key, command) : #encrypt command to server using key derived from scrypt_PBKDF https://pycryptodome.readthedocs.io/en/latest/src/cipher/aes.html
         cipher = AES.new(key, AES.MODE_CBC)
         nonce = cipher.nonce
         ciphertext, tag = cipher.encrypt_and_digest(command)
