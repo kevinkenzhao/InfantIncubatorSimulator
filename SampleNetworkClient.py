@@ -3,6 +3,9 @@ import matplotlib.animation as animation
 import time
 import math
 import socket
+from Crypto.Protocol.KDF import scrypt
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES
 
 class SimpleNetworkClient :
     def __init__(self, port1, port2) :
@@ -73,7 +76,19 @@ class SimpleNetworkClient :
         self.incTemps = self.incTemps[-30:]
         self.incLn.set_data(range(30), self.incTemps)
         return self.incLn,
+    
+    def scrypt_PBKDF(self, pw) : #generate key used for AES encryption from password
+        pw = bytes(pw, 'utf-8')
+        salt = get_random_bytes(16)
+        key = scrypt(pw, salt, 16, N=2**14, r=8, p=1)
+        return key
 
+    def AES_encrypt(self, key, command) : #encrypt command to server using key derived from scrypt_PBKDF
+        cipher = AES.new(key, AES.MODE_CBC)
+        nonce = cipher.nonce
+        ciphertext, tag = cipher.encrypt_and_digest(command)
+        return ciphertext, tag
+        
 snc = SimpleNetworkClient(23456, 23457)
 
 plt.grid()
