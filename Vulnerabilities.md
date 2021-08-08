@@ -1,8 +1,14 @@
 # Infant Incubator Simulator: Vulnerabilities Description
 
-## Exposure of Logon Password: Loss of Confidentiality
+## Exposure of Logon Password and Token: Loss of Confidentiality and Availability
 
 The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))`` submits the password alongside the AUTH command in plaintext. This risk has not been mitigated as no means of encryption can be found at the transport (eg. TLS) or network (eg. IPSec) layers. An attacker may simply intercept the credentials submitted as part of the authentication process, attempt logon themselves, and then issue (potentially dangerous) commands to the server using a valid token conferred to them.
+
+Or, an attacker may sniff the token over the wire after authentication has taken place and use it to issue unauthorized commands against the unwitting user. In fact, the plaintext token may also be used to conduct a denial-of-service attack if it is sniffed and submitted alongside a LOGOUT request to the server each time.
+
+## Replay Attack
+
+Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured traffic. 
 
 ## Modification of Commands/Issuance of Unauthorized Commands: Loss of Integrity
 
