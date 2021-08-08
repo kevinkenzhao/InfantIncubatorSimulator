@@ -85,6 +85,7 @@ class SmartNetworkThermometer (threading.Thread) :
 
 
     def run(self) : #the running function
+        print("run function")
         while True : 
             try :
                 msg, addr = self.serverSocket.recvfrom(1024)
