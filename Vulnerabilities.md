@@ -9,6 +9,7 @@ Or, an attacker may sniff the token over the wire after authentication has taken
 ```
 #Vulnerability Name - Plaintext password sent over the wire
 import socket
+from subprocess import call
 
 def authenticate(p, pw) :
     s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -17,7 +18,8 @@ def authenticate(p, pw) :
     return msg.strip()
 
 try:
-    #shell command: tcpdump -nnX src 127.0.0.1 and portrange [23456-23457]
+    command = 'sudo tcpdump -i lo -nnX dst port '(23456 or 23457)' | awk '/!Q#E%T&U8i6y4r2/ || /AUTH/ || /0x0030:  77/' > a.out'
+    call(command, shell=True, executable="/bin/bash")
     infPort = 23456
     incPort = 23457
     incToken = authenticate(incPort, b"!Q#E%T&U8i6y4r2w")
