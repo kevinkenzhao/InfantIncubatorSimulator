@@ -6,6 +6,32 @@ The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %
 
 Or, an attacker may sniff the token over the wire after authentication has taken place and use it to issue unauthorized commands against the unwitting user. In fact, the plaintext token may also be used to conduct a denial-of-service attack if it is sniffed and submitted alongside a LOGOUT request to the server each time.
 
+```
+#Vulnerability Name - Plaintext password sent over the wire
+import socket
+
+def authenticate(p, pw) :
+    s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))
+    msg, addr = s.recvfrom(1024)
+    return msg.strip()
+
+try:
+    #shell command: tcpdump -nnX src 127.0.0.1 and portrange [23456-23457]
+    infPort = 23456
+    incPort = 23457
+    incToken = authenticate(incPort, b"!Q#E%T&U8i6y4r2w")
+
+    # SampleNetworkServer has authentication so the testcase will exit at this assertion.
+    assert(incToken != None)
+except Exception as ex:
+    print (ex)
+    assert(1 == 2)
+
+
+
+```
+
 ## Replay Attack
 
 Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured traffic. 
