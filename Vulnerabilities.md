@@ -55,3 +55,5 @@ do
 	( kill -TERM $pid ) 2>&1
 done
 ```
+
+## Excess Functionality: addInfant()
