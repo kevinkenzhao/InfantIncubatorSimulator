@@ -2,36 +2,19 @@
 
 ## Exposure of Logon Password and Token: Loss of Confidentiality and Availability
 
-The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))`` submits the password alongside the AUTH command in plaintext. This risk has not been mitigated as no means of encryption can be found at the transport (eg. TLS) or network (eg. IPSec) layers. An attacker may simply intercept the credentials submitted as part of the authentication process, attempt logon themselves, and then issue (potentially dangerous) commands to the server using a valid token conferred to them.
+The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))`` submits the password alongside the AUTH command in plaintext. This risk has not been mitigated as no means of encryption can be found at the transport (eg. TLS) or network (eg. IPSec) layers. Using this information, we craft a test case in which traffic captured by tcpdump on ports 23456 and 23457 from the loopback interface is parsed using awk and packets containing the plaintext password are writtened to ``discovered.txt``. An attacker may simply intercept the credentials submitted as part of the authentication process, attempt logon themselves, and then issue (potentially dangerous) commands to the server using a valid token conferred to them.
 
 Or, an attacker may sniff the token over the wire after authentication has taken place and use it to issue unauthorized commands against the unwitting user. In fact, the plaintext token may also be used to conduct a denial-of-service attack if it is sniffed and submitted alongside a LOGOUT request to the server each time.
 
 ```
-#Vulnerability Name - Plaintext password sent over the wire
-import socket
-from subprocess import call
+sudo tcpdump -i lo -nnX dst port '(23456 or 23457)' | awk '{ if (/!Q#E%T&U8i6y4r2/ || /AUTH/ || /.*0x0030:.*/) { print > "discovered.txt" } else { print > "not-found.txt" } }' &
+sleep 30
 
-def authenticate(p, pw) :
-    s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))
-    msg, addr = s.recvfrom(1024)
-    return msg.strip()
-
-try:
-    command = 'sudo tcpdump -i lo -nnX dst port '(23456 or 23457)' | awk '/!Q#E%T&U8i6y4r2/ || /AUTH/ || /0x0030:  77/' > a.out'
-    call(command, shell=True, executable="/bin/bash")
-    infPort = 23456
-    incPort = 23457
-    incToken = authenticate(incPort, b"!Q#E%T&U8i6y4r2w")
-
-    # SampleNetworkServer has authentication so the testcase will exit at this assertion.
-    assert(incToken != None)
-except Exception as ex:
-    print (ex)
-    assert(1 == 2)
-
-
-
+if grep -q "!Q#E%T&U8i6y4r2" discovered.txt; then
+    echo plaintext password found
+else
+    echo plaintext password not found
+fi
 ```
 
 ## Replay Attack
