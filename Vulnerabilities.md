@@ -57,3 +57,7 @@ done
 ```
 
 ## Excess Functionality: addInfant()
+
+## Session Expiry
+
+Unless the SampleNetworkServer is restarted, all previously issued access tokens are valid until the user explicitly invalidates them by issuing the LOGOUT command along with their access token(s). However, a nurse may forget or refuse to log out of the system at the conclusion of their shift. This results in a lack of forward secrecy as an attacker who has learned of a token from _X_ days/months/years ago may leverage it indefinitely.
