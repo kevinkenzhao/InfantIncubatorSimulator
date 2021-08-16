@@ -114,3 +114,13 @@ done
 Unless the SampleNetworkServer is restarted, all previously issued access tokens are valid until the user explicitly invalidates them by issuing the LOGOUT command along with their access token(s). However, a nurse may forget or refuse to log out of the system at the conclusion of their shift. This results in a lack of forward secrecy as an attacker who has learned of a token from _X_ days/months/years ago may leverage it indefinitely.
 
 One approach to mitigate this issue is to perform a server-side check of a token submitted alongside a command to ascertain that the difference between CURRENT_TIME and TIME is less than or equal to the MAX_AGE (defined by the system designer). If this statement evaluates to true, the token in question is removed from self.tokens[] and the user is prompted to re-authenticate.
+
+We have implemented a token validity check in the form of a conditional statement:
+```
+if time.time() - self.tokens[gen_token] > 43200:
+    nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Expired Token\n")
+    full_msg = nonce + b" " + encrypted_msg + b" " + tag
+    self.serverSocket.sendto(full_msg, addr)   
+```
+
+and re-implemented _self.tokens_ as a dictionary instead a list structure, allowing us to append randomly generated tokens as keys and update their corresponding values with the time of generation. By storing this additional value, we are able to perform validity checks on whether the token in question has exceeded the max age of 12 hours.
