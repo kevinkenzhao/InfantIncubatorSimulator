@@ -7,6 +7,8 @@ The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %
 
 Or, an attacker may sniff the token over the wire after authentication has taken place and use it to issue unauthorized commands against the unwitting user. In fact, the plaintext token may also be used to conduct a denial-of-service attack if it is sniffed and submitted alongside a LOGOUT request to the server each time.
 
+As part of layered security approach, we would likely isolate the server in a network segment such that it is reachable only by the workstations in the neonatal intensive care unit and reinforced by NAC (eg. MAC address whitelisting).
+
 ```
 sudo tcpdump -i lo -nnX dst port '(23456 or 23457)' | awk '{ if (/!Q#E%T&U8i6y4r2/ || /AUTH/ || /.*0x0030:.*/) { print > "discovered.txt" } else { print > "not-found.txt" } }' &
 sleep 30
@@ -76,7 +78,7 @@ Furthermore, a bcrypt PBKDF function is harnessed to generate session keys for e
 
 ## "So you think you have signed out...": Lack of Identity
 
-The current prototype uses a password and 16-character psuedorandom token with character set (^[A-Za-z0-9]{16}$) for its authentication processes. However, it does not have means for managing the identity of those successful logon attempts. This is less of an issue if we assume that only one nurse at a hospital should monitor the incubator and know the password. However, nurses are spread across a myriad of responsibilities and rotate shifts, thus multiple nurses will need to access the remote interface. Should any of the nurses pose an insider threat, the organization has the ability to attribute/account for the damages.
+The current prototype uses a password and 16-character psuedorandom token with character set (^[A-Za-z0-9]{16}$) for its authentication processes. However, it does not have means for managing the identity of those successful logon attempts. This is less of an issue if we assume that only one nurse at a hospital should monitor the incubator and know the password. However, nurses carry a myriad of responsibilities and work in shifts, thus multiple nurses would access the remote interface. Should any of the nurses commit an act of malevolence, the organization has the ability to attribute/account for the damages.
 
 ## Duplicate Tokens
 
