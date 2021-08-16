@@ -70,7 +70,9 @@ The success of the attack rests on commands being transmitted in plaintext and t
 
 ### Replay Attack
 
-Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. 
+Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. To mitigate this attack vector, we incorporate a nonce value within each AES-CCM operation that overwritten with an arbitrary value just before the encrypted response is sent into the socket. Why? if the nonce is not overwritten before the response is released into the socket **and** no successive requests are made to the server before an attacker initiates a replay attack, the possibility exists that the fradulent message passes as legitimate, and an unsolicited, encrypted response will be generated for the user.
+
+Furthermore, a bcrypt PBKDF function is harnessed to generate session keys for each query-response (ie. exchange) 
 
 ## "So you think you have signed out...": Lack of Identity
 
