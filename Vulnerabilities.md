@@ -80,6 +80,8 @@ Furthermore, a bcrypt PBKDF function is harnessed to generate session keys for e
 
 The current prototype uses a password and 16-character psuedorandom token with character set (^[A-Za-z0-9]{16}$) for its authentication processes. However, it does not have means for managing the identity of those successful logon attempts. This is less of an issue if we assume that only one nurse at a hospital should monitor the incubator and know the password. However, nurses carry a myriad of responsibilities and work in shifts, thus multiple nurses would access the remote interface. Should any of the nurses commit an act of malevolence, the organization has the ability to attribute/account for the damages.
 
+Therefore, the authentication scheme has been amended to require users to supply a non-generic username along with their password in the form: ``AUTH USERNAME PASSWORD``. Passwords will be digested with the X algorithm, and stored/retrieved from a ``.env`` file stored on the server and secured with root privileges. 
+
 ## Duplicate Tokens
 
 Although there is an infinitesimal chance of distributing a token which already exists in the list ``tokens[]`` given the sample space of (26 capital letters + 26 lowercase letters + 10 digits)^16, there is no mechanism to prevent that situation from occurring. Therefore, a check for whether a psuedorandomly generated token exists in ``tokens[]`` before appending it to the list should be implemented--if it does, generate a new one.
