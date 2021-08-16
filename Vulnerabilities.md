@@ -70,7 +70,7 @@ The success of the attack rests on commands being transmitted in plaintext and t
 
 ### Replay Attack
 
-Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. To mitigate this attack vector, we incorporate a nonce value within each AES-CCM operation that overwritten with an arbitrary value just before the encrypted response is sent into the socket. Why? if the nonce is not overwritten before the response is released into the socket **and** no successive requests are made to the server before an attacker initiates a replay attack, the possibility exists that the fradulent message passes as legitimate, and an unsolicited, encrypted response will be generated for the user.
+Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. To mitigate this attack vector, we incorporate a nonce value within each AES-CCM operation that overwritten with an arbitrary value just before the encrypted response is sent into the socket. Why? if the nonce is not overwritten before the response is released into the socket **and** no successive requests are made to the server before an attacker initiates a replay attack, the possibility exists that the fraudulent message passes as legitimate, and an unsolicited, encrypted response will be generated for the user.
 
 Furthermore, a bcrypt PBKDF function is harnessed to generate session keys for each query-response (ie. exchange) 
 
@@ -81,6 +81,14 @@ The current prototype uses a password and 16-character psuedorandom token with c
 ## Duplicate Tokens
 
 Although there is an infinitesimal chance of distributing a token which already exists in the list ``tokens[]`` given the sample space of (26 capital letters + 26 lowercase letters + 10 digits)^16, there is no mechanism to prevent that situation from occurring. Therefore, a check for whether a psuedorandomly generated token exists in ``tokens[]`` before appending it to the list should be implemented--if it does, generate a new one.
+
+```
+while True:
+    gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+    if gen_token not in self.tokens:
+        break
+self.tokens.append(gen_token) 
+```
 
 **The problem**
 
