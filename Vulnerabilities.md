@@ -29,6 +29,9 @@ The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128
 
 ![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/encrypted_traffic.PNG?raw=true)
 
+_Nota bene_: encrypted traffic is considerably larger than its plaintext counterpart, primarily owing to the use of the delimiter "CS-GY6803" to properly parse the nonce, encrypted message, AES tag, PBKDF salt, and transmit mode to determine whether the existing salt value should be used or a new one should be generated.
+
+
 ## Attacks against Integrity
 
 ### Modification of Commands
