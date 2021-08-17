@@ -10,11 +10,12 @@ import os
 import errno
 import random
 import string
-#from hashlib import blake2b
+from hashlib import blake2b
 import time
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES
+from dotenv import load_dotenv
 
 class SmartNetworkThermometer (threading.Thread) :
     open_cmds = ["AUTH", "LOGOUT"]
@@ -91,18 +92,23 @@ class SmartNetworkThermometer (threading.Thread) :
 
 
     def processCommands(self, msg, session_key, addr) :
+        env_file = os.getcwd() + "/.env"
+        try:
+            print(".env file found!")
+            load_dotenv(env_file)
+        except:
+            print(".env file not found!")
+        BLAKE_KEY = os.environ['BLAKE_KEY']
         cmds = msg.split(';')
         gen_token = ""
         for c in cmds :
             cs = c.split(' ')
             if len(cs) == 2 : #should be either AUTH or LOGOUT
                 if cs[0] == "AUTH":
-                    #h = blake2b(key=b'!Q#E%T&U8i6y4r2w', digest_size=16)
-                    #h.update(cs[1].encode())
-                    #h.hexdigest()
-                    #if str(h.hexdigest()) == "ee3b468bd79d81512a5f20ffd9fd9bce" :
-                    if cs[1] == "!Q#E%T&U8i6y4r2w" :
-                        #password should not be hardcoded in server script; use env variable
+                    h = blake2b(key=BLAKE_KEY.encode('utf8'), digest_size=16)
+                    h.update(cs[1].encode())
+                    h.hexdigest()
+                    if str(h.hexdigest()) == "7a47576b041f70eafcf9e74e579bc87c" :
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
                         gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
                         for k in self.tokens:
@@ -288,4 +294,3 @@ sc = SimpleClient(bobThermo, incThermo)
 
 plt.grid()
 plt.show()
-
