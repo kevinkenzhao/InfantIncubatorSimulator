@@ -1,8 +1,7 @@
 # Infant Incubator Simulator: Vulnerabilities Description
 
-## Attacks against Confidentiality
+## Exposure of Logon Password and Token: Attack against Confidentiality
 
-### Exposure of Logon Password and Token
 The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))`` submits the password alongside the AUTH command in plaintext. This risk has not been mitigated as no means of encryption can be found at the transport (eg. TLS) or network (eg. IPSec) layers. Using this information, we craft a test case in which traffic captured by tcpdump on ports 23456 and 23457 from the loopback interface is parsed using awk and packets containing the plaintext password are writtened to ``discovered.txt``. An attacker may simply intercept the credentials submitted as part of the authentication process, attempt logon themselves, and then issue (potentially dangerous) commands to the server using a valid token conferred to them.
 
 Or, an attacker may sniff the token over the wire after authentication has taken place and use it to issue unauthorized commands against the unwitting user. In fact, the plaintext token may also be used to conduct a denial-of-service attack if it is sniffed and submitted alongside a LOGOUT request to the server each time.
@@ -20,7 +19,16 @@ else
 fi
 ```
 
-The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks can be mitigated by invalidating (ie. randomizing) either (1) the client-generated nonce value used for AES encryption or (2) salt value needed to recover the session key in the scrypt function--we elected to override the latter. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check. 
+The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks can be mitigated by invalidating (ie. randomizing) either (1) the client-generated nonce value used for AES encryption or (2) salt value needed to recover the session key in the scrypt function--we elected to override the latter. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check.
+
+### Before encryption-in-transit:
+
+![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/plaintext_traffic.PNG?raw=true)
+
+### After encryption-in-transit:
+
+![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/encrypted_traffic.PNG?raw=true)
+
 ## Attacks against Integrity
 
 ### Modification of Commands
