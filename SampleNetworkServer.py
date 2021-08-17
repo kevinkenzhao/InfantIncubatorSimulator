@@ -10,6 +10,11 @@ import os
 import errno
 import random
 import string
+#from hashlib import blake2b
+import time
+from Crypto.Protocol.KDF import scrypt
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES
 
 class SmartNetworkThermometer (threading.Thread) :
     open_cmds = ["AUTH", "LOGOUT"]
@@ -22,13 +27,44 @@ class SmartNetworkThermometer (threading.Thread) :
         self.updatePeriod = updatePeriod
         self.curTemperature = 0
         self.updateTemperature()
-        self.tokens = []
+        self.tokens = {}
 
         self.serverSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.serverSocket.bind(("127.0.0.1", port))
         fcntl.fcntl(self.serverSocket, fcntl.F_SETFL, os.O_NONBLOCK)
 
         self.deg = "K"
+
+    def scrypt_PBKDF(self, pw, transmit_mode, salt=None) : #generate key used for AES encryption from password https://pycryptodome.readthedocs.io/en/latest/src/protocol/kdf.html
+        pw = bytes(pw, 'utf-8')
+        s = b""
+        if transmit_mode == b"1": #if generating a key for outbound message
+            s = get_random_bytes(16)
+            print("mode 1")
+        elif transmit_mode == b"2": #if generating a key to decrypt inbound message
+            s = salt
+            print("mode 2")
+        key = scrypt(pw, s, 16, N=2**14, r=8, p=1)
+        print("scrypt key length is " + str(len(key)))
+        return key, s
+
+    def AES_encrypt(self, key, command) : #encrypt command to server using key derived from scrypt_PBKDF https://pycryptodome.readthedocs.io/en/latest/src/cipher/aes.html
+        cipher = AES.new(key, AES.MODE_EAX)
+        nonce = cipher.nonce
+        ciphertext, tag = cipher.encrypt_and_digest(command)
+        return nonce, ciphertext, tag
+
+    def AES_decrypt(self, key, ciphertext, nonce, tag) : #encrypt command to server using key derived from scrypt_PBKDF https://pycryptodome.readthedocs.io/en/latest/src/cipher/aes.html
+        cipher = AES.new(key, AES.MODE_EAX, nonce=bytes(nonce))
+        plaintext = cipher.decrypt(bytes(ciphertext)) #returns password as bytes object
+        try:
+            #This method checks if the decrypted message is indeed valid (that is, if the key is correct) and it has not been tampered with while in transit.
+            #tag is the hash of the plaintext
+            cipher.verify(bytes(tag))
+            print ("The message is authentic!")
+            return plaintext.decode("utf-8").strip()
+        except ValueError:
+            print ("Tag of decrypted message not consistent with sent tag!")
 
     def setSource(self, source) :
         self.source = source
@@ -52,17 +88,34 @@ class SmartNetworkThermometer (threading.Thread) :
 
         return self.curTemperature
 
-    def processCommands(self, msg, addr) :
+
+
+    def processCommands(self, msg, session_key, addr) :
         cmds = msg.split(';')
+        gen_token = ""
         for c in cmds :
             cs = c.split(' ')
             if len(cs) == 2 : #should be either AUTH or LOGOUT
                 if cs[0] == "AUTH":
+                    #h = blake2b(key=b'!Q#E%T&U8i6y4r2w', digest_size=16)
+                    #h.update(cs[1].encode())
+                    #h.hexdigest()
+                    #if str(h.hexdigest()) == "ee3b468bd79d81512a5f20ffd9fd9bce" :
                     if cs[1] == "!Q#E%T&U8i6y4r2w" :
                         #password should not be hardcoded in server script; use env variable
-                        self.tokens.append(''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))) 
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
-                        self.serverSocket.sendto(self.tokens[-1].encode("utf-8"), addr)
+                        gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+                        for k in self.tokens:
+                            if gen_token != k:
+                                continue
+                            else:
+                                gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+                        self.tokens[gen_token] = time.time()
+                        msg = [k for k in self.tokens][-1].encode("utf-8") + b"\n"
+                        nonce, encrypted_msg, tag = self.AES_encrypt(session_key, msg)
+                        full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
+                        self.serverSocket.sendto(full_msg, addr)
+
                         #print (self.tokens[-1])
                     #else: return generic message "Incorrect password!" for user experience
                 elif cs[0] == "LOGOUT":
@@ -77,7 +130,10 @@ class SmartNetworkThermometer (threading.Thread) :
             elif c == "SET_DEGK" :
                 self.deg = "K"
             elif c == "GET_TEMP" :
-                self.serverSocket.sendto(b"%f\n" % self.getTemperature(), addr)
+                msg = b"%f\n" % self.getTemperature()
+                nonce, encrypted_msg, tag = self.AES_encrypt(session_key, msg)
+                full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
+                self.serverSocket.sendto(full_msg, addr)
             elif c == "UPDATE_TEMP" :
                 self.updateTemperature()
             elif c :
@@ -89,27 +145,52 @@ class SmartNetworkThermometer (threading.Thread) :
         while True : 
             try :
                 msg, addr = self.serverSocket.recvfrom(1024)
-                msg = msg.decode("utf-8").strip()
-                cmds = msg.split(' ')
                 #decrypt commands here
+                #msg = msg.decode("utf-8").strip()
+                encrypted_params = msg.split(b"CS-GY6803")
+                for x in encrypted_params:
+                    print(str(x))
+                session_key, s = self.scrypt_PBKDF(pw="!Q#E%T&U8i6y4r2w", transmit_mode=encrypted_params[4], salt=encrypted_params[3])
+                print("session_key for decryption:")
+                print(str(session_key))
+                plaintext = self.AES_decrypt(session_key, encrypted_params[1], encrypted_params[0], encrypted_params[2])
+                print("plaintext is of type" + str(type(plaintext)))
+                cmds = plaintext.split(' ')
                 if len(cmds) == 1 : # protected commands case
-                    semi = msg.find(';')
+                    semi = plaintext.find(';')
                     if semi != -1 : #if we found the semicolon
                         #print (msg)
-                        if msg[:semi] in self.tokens : #if its a valid token
-                            self.processCommands(msg[semi+1:], addr)
+                        if plaintext[:semi] in self.tokens : #if its a valid token
+                            #checks for token expiration/validity
+                            submitted_token = plaintext[:semi]
+                            if time.time() - self.tokens[submitted_token] > 43200:
+                                self.tokens.remove(submitted_token)
+                                nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Expired Token\n")
+                                full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
+                                self.serverSocket.sendto(full_msg, addr)                                
+                            self.processCommands(plaintext[semi+1:], session_key, addr)
                         else :
-                            self.serverSocket.sendto(b"Bad Token\n", addr)
+                            nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Bad Token\n")
+                            full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
+                            self.serverSocket.sendto(full_msg, addr)
                     else :
-                            self.serverSocket.sendto(b"Bad Command\n", addr)
+                        nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Bad Command\n")
+                        full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
+                        self.serverSocket.sendto(full_msg, addr)
                 elif len(cmds) == 2 :
                     if cmds[0] in self.open_cmds : #if its AUTH or LOGOUT
-                        self.processCommands(msg, addr) 
+                        print("cmds[0] is of type" + str(type(cmds[0])))
+                        print("cmds[1] is of type" + str(type(cmds[1])))
+                        self.processCommands(plaintext, session_key, addr) 
                     else :
-                        self.serverSocket.sendto(b"Authenticate First\n", addr)
+                        nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Authenticate first\n")
+                        full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
+                        self.serverSocket.sendto(full_msg, addr)
                 else :
                     # otherwise bad command
-                    self.serverSocket.sendto(b"Bad Command\n", addr)
+                    nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Bad Command\n")
+                    full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
+                    self.serverSocket.sendto(full_msg, addr)
     
             except IOError as e :
                 if e.errno == errno.EWOULDBLOCK :
@@ -124,6 +205,8 @@ class SmartNetworkThermometer (threading.Thread) :
 
             self.updateTemperature()
             time.sleep(self.updatePeriod)
+
+
 
 
 class SimpleClient :
@@ -161,6 +244,9 @@ class SimpleClient :
         self.updateTime()
         self.infTemps.append(self.infTherm.getTemperature()-273)
         #self.infTemps.append(self.infTemps[-1] + 1)
+        #for x in self.infTemps:
+        #    print(str(x))
+        #print("chicken")
         self.infTemps = self.infTemps[-30:]
         self.infLn.set_data(range(30), self.infTemps)
         return self.infLn,
@@ -168,6 +254,9 @@ class SimpleClient :
     def updateIncTemp(self, frame) :
         self.updateTime()
         self.incTemps.append(self.incTherm.getTemperature()-273)
+        #for x in self.incTemps:
+        #    print(str(x))
+        #print("broccoli")
         #self.incTemps.append(self.incTemps[-1] + 1)
         self.incTemps = self.incTemps[-30:]
         self.incLn.set_data(range(30), self.incTemps)
