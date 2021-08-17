@@ -19,6 +19,8 @@ else
     echo plaintext password not found
 fi
 ```
+
+The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks are mitigated by invalidating (ie. randomizing) the salt value needed to recover the session key. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check. 
 ## Attacks against Integrity
 
 ### Modification of Commands
