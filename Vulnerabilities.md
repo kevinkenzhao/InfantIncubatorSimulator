@@ -141,3 +141,15 @@ if time.time() - self.tokens[gen_token] > 43200:
 ```
 
 and re-implemented _self.tokens_ as a dictionary instead a list structure, allowing us to append randomly generated tokens as keys and update their corresponding values with the time of generation. By storing this additional value, we are able to perform validity checks on whether the token in question has exceeded the max age of 12 hours.
+
+## Password Storage: Adherence to Best Practice
+
+Passwords should, at minimum, not be hard-coded into the SampleNetworkServer.py file. In this example, we will hash the plaintext password using the blake2b keyed hashing algorithm and store the result in a .env file through an entry of the form: ``USERNAME = '256_BIT_KEYED_HASH'``. The hash value will be retrieved (during the authentication process) using Python's ``dotenv`` module. For the purpose of demonstration, we will precompute the hash for plaintext password ``!Q#E%T&U8i6y4r2w`` using the key ``dUX&ggW4E7=PtG/PH6d`` and store the result in the form ``defaultuser0 = '7a47576b041f70eafcf9e74e579bc87c'`` in the .env file. Similarly, the key to the blake2b function will be stored as an entry: ``BLAKE_KEY = 'dUX&ggW4E7=PtG/PH6d'``.
+
+**Generation of Keyed Hash for Password Storage**
+``
+h = blake2b(key=b'dUX&ggW4E7=PtG/PH6d', digest_size=16)
+j = b'!Q#E%T&U8i6y4r2w'
+h.update(j)
+h.hexdigest()
+``
