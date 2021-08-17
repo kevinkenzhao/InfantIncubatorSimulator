@@ -20,7 +20,7 @@ else
 fi
 ```
 
-The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks are mitigated by invalidating (ie. randomizing) the salt value needed to recover the session key. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check. 
+The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks can be mitigated by invalidating (ie. randomizing) either (1) the client-generated nonce value used for AES encryption or (2) salt value needed to recover the session key in the scrypt function--we elected to override the latter. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check. 
 ## Attacks against Integrity
 
 ### Modification of Commands
