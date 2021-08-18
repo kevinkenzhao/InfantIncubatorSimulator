@@ -1,5 +1,7 @@
 # Infant Incubator Simulator: Vulnerabilities Description
 
+IMPORTANT: Please ensure the python-dotenv and Pycryptodome libraries are installed prior to running SampleNetworkServer.py.
+
 ## Exposure of Logon Password and Token: Attack against Confidentiality
 
 The socket sendto call within the ``authenticate`` function: ``s.sendto(b"AUTH %s" % pw, ("127.0.0.1", p))`` submits the password alongside the AUTH command in plaintext. This risk has not been mitigated as no means of encryption can be found at the transport (eg. TLS) or network (eg. IPSec) layers. Using this information, we craft a test case in which traffic captured by tcpdump on ports 23456 and 23457 from the loopback interface is parsed using awk and packets containing the plaintext password are writtened to ``discovered.txt``. An attacker may simply intercept the credentials submitted as part of the authentication process, attempt logon themselves, and then issue (potentially dangerous) commands to the server using a valid token conferred to them.
