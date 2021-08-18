@@ -92,12 +92,12 @@ class SmartNetworkThermometer (threading.Thread) :
 
 
     def processCommands(self, msg, session_key, addr) :
-        env_file = os.getcwd() + "/.env"
+        env_file = os.getcwd() + "/env.example"
         try:
-            print(".env file found!")
+            print("env file found!")
             load_dotenv(env_file)
         except:
-            print(".env file not found!")
+            print("env file not found!")
         BLAKE_KEY = os.environ['BLAKE_KEY']
         cmds = msg.split(';')
         gen_token = ""
