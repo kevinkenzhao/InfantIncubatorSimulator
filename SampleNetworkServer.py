@@ -103,12 +103,21 @@ class SmartNetworkThermometer (threading.Thread) :
         gen_token = ""
         for c in cmds :
             cs = c.split(' ')
-            if len(cs) == 2 : #should be either AUTH or LOGOUT
+            if len(cs) == 3 : #should be either AUTH or LOGOUT
                 if cs[0] == "AUTH":
+                    try:
+                        USER_HASH = os.environ[cs[1]] #loads username from user-submitted input (format: AUTH USERNAME PASSWORD)
+                    except:
+                        nonce, encrypted_msg, tag = self.AES_encrypt(session_key, "Username not found!")
+                        full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
+                        self.serverSocket.sendto(full_msg, addr)
                     h = blake2b(key=BLAKE_KEY.encode('utf8'), digest_size=16)
-                    h.update(cs[1].encode())
+                    h.update(cs[2].encode())
                     h.hexdigest()
-                    if str(h.hexdigest()) == "7a47576b041f70eafcf9e74e579bc87c" :
+                    print("hash comparison")
+                    print(str(h.hexdigest()))
+                    print(USER_HASH)
+                    if str(h.hexdigest()) == USER_HASH:
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
                         gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
                         for k in self.tokens:
@@ -118,6 +127,7 @@ class SmartNetworkThermometer (threading.Thread) :
                                 gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
                         self.tokens[gen_token] = time.time()
                         msg = [k for k in self.tokens][-1].encode("utf-8") + b"\n"
+                        print("sending the following token: " + str(msg))
                         nonce, encrypted_msg, tag = self.AES_encrypt(session_key, msg)
                         full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
                         self.serverSocket.sendto(full_msg, addr)
@@ -126,7 +136,7 @@ class SmartNetworkThermometer (threading.Thread) :
                     #else: return generic message "Incorrect password!" for user experience
                 elif cs[0] == "LOGOUT":
                     if cs[1] in self.tokens :
-                        self.tokens.remove(cs[1])
+                        self.tokens.pop(cs[1])
                 else : #unknown command
                     self.serverSocket.sendto(b"Invalid Command\n", addr)
             elif c == "SET_DEGF" :
@@ -161,6 +171,7 @@ class SmartNetworkThermometer (threading.Thread) :
                 print(str(session_key))
                 plaintext = self.AES_decrypt(session_key, encrypted_params[1], encrypted_params[0], encrypted_params[2])
                 print("plaintext is of type" + str(type(plaintext)))
+                print("plaintext is: " + str(plaintext))
                 cmds = plaintext.split(' ')
                 if len(cmds) == 1 : # protected commands case
                     semi = plaintext.find(';')
@@ -183,7 +194,7 @@ class SmartNetworkThermometer (threading.Thread) :
                         nonce, encrypted_msg, tag = self.AES_encrypt(session_key, b"Bad Command\n")
                         full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag
                         self.serverSocket.sendto(full_msg, addr)
-                elif len(cmds) == 2 :
+                elif len(cmds) == 3 :
                     if cmds[0] in self.open_cmds : #if its AUTH or LOGOUT
                         print("cmds[0] is of type" + str(type(cmds[0])))
                         print("cmds[1] is of type" + str(type(cmds[1])))
