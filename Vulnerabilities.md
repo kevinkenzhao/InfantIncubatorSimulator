@@ -90,7 +90,7 @@ fi
 
 The success of the attack rests on commands being transmitted in plaintext and the absence of a mechanism to verify that the intended command was not modified in-transit. We mitigate the risk of this attack by taking the has of the plaintext command before it is encrypted and sending both the ciphertext and tag to the recipient, where it is independently verified. 
 
-## "So you think you have signed out...": Lack of Identity
+## Lack of Identity
 
 The current prototype uses a password and 16-character psuedorandom token with character set (^[A-Za-z0-9]{16}$) for its authentication processes. However, it does not have means for managing the identity of those successful logon attempts. This is less of an issue if we assume that only one nurse at a hospital should monitor the incubator and know the password. However, nurses carry a myriad of responsibilities and work in shifts, thus multiple nurses would access the remote interface. Should any of the nurses commit an act of malevolence, the organization has the ability to attribute/account for the damages.
 
@@ -125,10 +125,29 @@ do
 done
 ```
 
-### Replay Attack
+## Replay Attack
 
 Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. We have elected to accept the risk of a replay attack on SimpleNetworkServer as the responses from the server cannot be decipher by an attacker, and the set of commands that may be submitted to the server cannot impart harm on a baby. However, DoS attacks, such as replay or token exhaustion attacks, will threaten our ability to receive accurate and timely temperature readings. To this end, we plan to leverage sequence numbers in the next product iteration. These numbers would be concatenated with the plaintext message, and a hash of the resulting string will be captured before it is encrypted with AES-EAX.
-## Excess Functionality: addInfant()
+
+## Dead Code: addInfant()
+
+The addInfant() function accounts for energy offsets given the placement of a baby within an incubator. However, that function is not called in any running function! Therefore, we added the function to the Simulator class as it is reasonable to assume that an incubator will be occupied:
+
+```
+class Simulator (threading.Thread) :
+    
+    def __init__ (self, infant, incubator, roomTemp, timeStep, sleepTime) : 
+        #infWeight, infLength, infTemp, infant, incWidth, incDepth, incHeight, incTemp, roomTemp, timeStep) :
+
+        threading.Thread.__init__(self, daemon = True)
+        self.infant = infant #Human(infWeight, infLength, infTemp)
+        self.incubator = incubator #Incubator(incWidth, incDepth, incHeight, incTemp, roomTemp)
+        self.roomTemperature = roomTemp
+        self.iteration = 0
+        self.timeStep = timeStep
+        self.sleepTime = sleepTime
+        self.incubator.addInfant(self.infant)
+```
 
 ## Session Expiry
 
