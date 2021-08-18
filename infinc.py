@@ -213,6 +213,7 @@ class Incubator :
         return (Incubator.SPECIFIC_HEAT * self.mass * self.temperature)
 
     def calculateTemperature(self) :
+        #print("calTemperature called!")
         # The temperature is based on the amount of energy
         return (self.energy / Incubator.SPECIFIC_HEAT / self.mass)
 
@@ -242,8 +243,8 @@ class Incubator :
         airVolume = self.volume - self.infant.volume
 
         #now update the energy content based on the current temperature
-        airMass = Incubator.DENSITY * airVolume
-        energy = Incubator.SPECIFIC_HEAT * airMass * self.temperature
+        airMass = Incubator.DENSITY * airVolume #Density of air should be used to calculate airMass - OK
+        self.energy = Incubator.SPECIFIC_HEAT * airMass * self.temperature
         
     def closeIncubator(self) :
         pass #nothing to do here for the simulation
@@ -285,15 +286,17 @@ class Simulator (threading.Thread) :
         self.iteration = 0
         self.timeStep = timeStep
         self.sleepTime = sleepTime
+        self.incubator.addInfant(self.infant) #assume that the infant is added to incubator
 
     def run(self) :
         while True :
             #1. Simulate infant using incubator temperature
             e = self.infant.simulateTransferWithChamber(self.timeStep, self.incubator.getTemperature())
+            #3. Add the energy gain or loss from infant
+            #self.incubator.addEnergy(e)
             #2. Infant is updated, now incubator with room
             e2 = self.incubator.simulateTransferWithRoom(self.timeStep, self.roomTemperature)
-            #3. Add the energy gain or loss from infant
-            self.incubator.addEnergy(e)
+            #update energy after heat transfer via plexiglass
+            #self.incubator.addEnergy(e2)
     
             time.sleep(self.sleepTime)
-
