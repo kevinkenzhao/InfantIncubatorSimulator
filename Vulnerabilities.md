@@ -21,6 +21,9 @@ fi
 
 The encryption scheme we have implemented harnesses the scrypt PBKDF and AES 128-bit in EAX mode of operation to ensure perfect forward secrecy and reduce the risk of key compromise. Replay attacks can be mitigated by invalidating (ie. randomizing) either (1) the client-generated nonce value used for AES encryption or (2) salt value needed to recover the session key in the scrypt function--we elected to override the latter. If the session key is discarded, decryption fails due to incorrect key length or results in some plaintext value which fails the MAC verification check.
 
+Considerations:
+- Because the server has been configured to intake encrypted data, sending plaintext messages via ``nc -u 127.0.0.1 23456``, for example, will likely result in parsing errors.
+
 ### Before encryption-in-transit:
 
 ![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/plaintext_traffic.PNG?raw=true)
