@@ -119,12 +119,12 @@ class SmartNetworkThermometer (threading.Thread) :
                     print(USER_HASH)
                     if str(h.hexdigest()) == USER_HASH:
                         #creates string like "HBD7lmLdHKerOQVE", with (26+26+10)^16 as the number of possible values
-                        gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+                        gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(64))
                         for k in self.tokens:
                             if gen_token != k:
                                 continue
                             else:
-                                gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+                                gen_token = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(64))
                         self.tokens[gen_token] = time.time()
                         msg = [k for k in self.tokens][-1].encode("utf-8") + b"\n"
                         print("sending the following token: " + str(msg))
@@ -132,8 +132,10 @@ class SmartNetworkThermometer (threading.Thread) :
                         full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
                         self.serverSocket.sendto(full_msg, addr)
 
-                        #print (self.tokens[-1])
-                    #else: return generic message "Incorrect password!" for user experience
+                    else:
+                        nonce, encrypted_msg, tag = self.AES_encrypt(session_key, "Incorrect username/password!")
+                        full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag                     
+                        self.serverSocket.sendto(full_msg, addr)
                 elif cs[0] == "LOGOUT":
                     if cs[1] in self.tokens :
                         self.tokens.pop(cs[1])
