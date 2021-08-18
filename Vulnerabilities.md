@@ -96,7 +96,7 @@ The success of the attack rests on commands being transmitted in plaintext and t
 
 The current prototype uses a password and 16-character psuedorandom token with character set (^[A-Za-z0-9]{16}$) for its authentication processes. However, it does not have means for managing the identity of those successful logon attempts. This is less of an issue if we assume that only one nurse at a hospital should monitor the incubator and know the password. However, nurses carry a myriad of responsibilities and work in shifts, thus multiple nurses would access the remote interface. Should any of the nurses commit an act of malevolence, the organization has the ability to attribute/account for the damages.
 
-Therefore, the authentication scheme has been amended to require users to supply a non-generic username along with their password in the form: ``AUTH USERNAME PASSWORD``. Passwords will be digested with the X algorithm, and stored/retrieved from a ``.env`` file stored on the server and secured with root privileges. 
+Therefore, the authentication scheme has been amended to require users to supply a non-generic username along with their password in the form: ``AUTH USERNAME PASSWORD``. Passwords will be digested with the X algorithm, and stored/retrieved from a ``env.example`` file stored on the server and secured with root privileges. 
 
 ## Duplicate Tokens
 
@@ -112,7 +112,7 @@ while True:
 self.tokens.append(gen_token) 
 ```
 
-To mitigate the risk of a DoS scenario as a result of perpetual authentication requests. We increased the token size to 64-characters. Moreover, we implemented the notion of identity so that in successive iterations of the product, we may rate-limit the number of successful requests on the basis of username.
+To mitigate the risk of a DoS scenario as a result of perpetual authentication requests, we increased the token size to 64-characters. Moreover, we implemented the notion of identity so that in successive iterations of the product, rate-limiting control based on the number of successful requests by a specific username can be instituted.
 
 ```
 #!/usr/bin/bash
