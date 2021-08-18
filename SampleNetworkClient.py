@@ -143,10 +143,7 @@ class SimpleNetworkClient :
         self.incTemps = self.incTemps[-30:]
         self.incLn.set_data(range(30), self.incTemps)
         return self.incLn,
-    
-
-
-        
+      
 snc = SimpleNetworkClient(23456, 23457)
 
 plt.grid()
