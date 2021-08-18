@@ -32,6 +32,10 @@ Considerations:
 
 ![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/encrypted_traffic.PNG?raw=true)
 
+### Encryption Diagram
+
+![alt text](https://github.com/kevinkenzhao/InfantIncubatorSimulator/blob/main/encryption_diagram.PNG?raw=true)
+
 _Nota bene_: encrypted traffic is considerably larger than its plaintext counterpart, primarily owing to the use of the delimiter "CS-GY6803" to properly parse the nonce, encrypted message, AES tag, PBKDF salt, and transmit mode (to determine whether the existing salt value should be used or a new one should be generated) when it arrives at the recipient's socket.
 
 
@@ -84,13 +88,7 @@ else
 fi
 ```
 
-The success of the attack rests on commands being transmitted in plaintext and the absence of a mechanism to verify that the intended command was not modified in-transit.
-
-### Replay Attack
-
-Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. To mitigate this attack vector, we incorporate a nonce value within each AES-CCM operation that overwritten with an arbitrary value just before the encrypted response is sent into the socket. Why? if the nonce is not overwritten before the response is released into the socket **and** no successive requests are made to the server before an attacker initiates a replay attack, the possibility exists that the fraudulent message passes as legitimate, and an unsolicited, encrypted response will be generated for the user.
-
-Furthermore, a bcrypt PBKDF function is harnessed to generate session keys for each query-response (ie. exchange) 
+The success of the attack rests on commands being transmitted in plaintext and the absence of a mechanism to verify that the intended command was not modified in-transit. We mitigate the risk of this attack by taking the has of the plaintext command before it is encrypted and sending both the ciphertext and tag to the recipient, where it is independently verified. 
 
 ## "So you think you have signed out...": Lack of Identity
 
@@ -99,6 +97,8 @@ The current prototype uses a password and 16-character psuedorandom token with c
 Therefore, the authentication scheme has been amended to require users to supply a non-generic username along with their password in the form: ``AUTH USERNAME PASSWORD``. Passwords will be digested with the X algorithm, and stored/retrieved from a ``.env`` file stored on the server and secured with root privileges. 
 
 ## Duplicate Tokens
+
+Suppose Eve intercepts an ``AUTH`` communication by Alice to the ``SampleNetworkServer`` and discovers the command ``AUTH !Q#E%T&U8i6y4r2w`` in the application layer of the captured packets. We assume that the packets are unencrypted, though encrypted packets would work all the same. Using this information, we crafted a test case which generates and submits a fast and continuous stream of authentication requests to ``SampleNetworkServer``. Performed at scale, this attack could lead to token exhaustion (if unique tokens in ``tokens[]`` is enforced), duplicate tokens in ``tokens[]``, or eventually, a program crash due to system resource exhaustion. _If duplicate tokens exist, a user that performs a LOGOUT operation using their token has not invalidated their token until they have perform the LOGOUT operations for the number of token occurences_.
 
 Although there is an infinitesimal chance of distributing a token which already exists in the list ``tokens[]`` given the sample space of (26 capital letters + 26 lowercase letters + 10 digits)^16, there is no mechanism to prevent that situation from occurring. Therefore, a check for whether a psuedorandomly generated token exists in ``tokens[]`` before appending it to the list should be implemented--if it does, generate a new one.
 
@@ -110,9 +110,7 @@ while True:
 self.tokens.append(gen_token) 
 ```
 
-**The problem**
-
-Eve intercepts an ``AUTH`` communication by Alice to the ``SampleNetworkServer`` and discovers the command ``AUTH !Q#E%T&U8i6y4r2w`` in the application layer of the captured packets. We assume that the packets are unencrypted. Using this information, we craft a test case which generates and submits a fast and continuous stream of authentication requests to ``SampleNetworkServer``. Performed at scale, this attack could lead to token exhaustion (if unique tokens in ``tokens[]`` is enforced), duplicate tokens in ``tokens[]``, or eventually, a program crash due to system resource exhaustion. _If duplicate tokens exist, a user that performs a LOGOUT operation using their token has not invalidated their token until they have perform the LOGOUT operations for the number of token occurences_.
+To mitigate the risk of a DoS scenario as a result of perpetual authentication requests. We increased the token size to 64-characters. Moreover, we implemented the notion of identity so that in successive iterations of the product, we may rate-limit the number of successful requests on the basis of username.
 
 ```
 #!/usr/bin/bash
@@ -127,6 +125,9 @@ do
 done
 ```
 
+### Replay Attack
+
+Although encryption and hashing may prevent an attacker from learning meaningful information from packet traffic or passing modified content as genuine, they do not prevent the replay of captured UDP traffic. We have elected to accept the risk of a replay attack on SimpleNetworkServer as the responses from the server cannot be decipher by an attacker, and the set of commands that may be submitted to the server cannot impart harm on a baby. However, DoS attacks, such as replay or token exhaustion attacks, will threaten our ability to receive accurate and timely temperature readings. To this end, we plan to leverage sequence numbers in the next product iteration. These numbers would be concatenated with the plaintext message, and a hash of the resulting string will be captured before it is encrypted with AES-EAX.
 ## Excess Functionality: addInfant()
 
 ## Session Expiry
@@ -149,7 +150,8 @@ and re-implemented _self.tokens_ as a dictionary instead a list structure, allow
 
 Passwords should, at minimum, not be hard-coded into the SampleNetworkServer.py file. In this example, we will hash the plaintext password using the blake2b keyed hashing algorithm and store the result in a .env file through an entry of the form: ``USERNAME = '256_BIT_KEYED_HASH'``. The hash value will be retrieved (during the authentication process) using Python's ``dotenv`` module. For the purpose of demonstration, we will precompute the hash for plaintext password ``!Q#E%T&U8i6y4r2w`` using the key ``dUX&ggW4E7=PtG/PH6d`` and store the result in the form ``defaultuser0 = '7a47576b041f70eafcf9e74e579bc87c'`` in the .env file. Similarly, the key to the blake2b function will be stored as an entry: ``BLAKE_KEY = 'dUX&ggW4E7=PtG/PH6d'``.
 
-**Generation of Keyed Hash for Password Storage**
+The following code generates the 256-bit keyed hash of defaultuser0's password for storage:
+
 ```
 h = blake2b(key=b'dUX&ggW4E7=PtG/PH6d', digest_size=16)
 j = b'!Q#E%T&U8i6y4r2w'
