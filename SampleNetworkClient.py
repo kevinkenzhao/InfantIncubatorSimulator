@@ -76,10 +76,12 @@ class SimpleNetworkClient :
             plt.title(time.strftime("%A, %Y-%m-%d", time.localtime(now)))
 
     def getTemperatureFromPort(self, p, tok) :
+        print("Token upon arrival getTempFromPort: " + str(tok))
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         key, salt = self.scrypt_PBKDF(pw=b"!Q#E%T&U8i6y4r2w", transmit_mode=b"1")
         command = bytearray(bytes(tok, "utf-8"))
         command.extend(b';GET_TEMP')
+        print("GetTEMP: " + str(command))
         nonce, encrypted_msg, tag = self.AES_encrypt(key, command)
         full_msg = nonce + b"CS-GY6803" + encrypted_msg + b"CS-GY6803" + tag + b"CS-GY6803" + salt + b"CS-GY6803" + b"2"
         s.sendto(full_msg, ("127.0.0.1", p)) 
@@ -94,7 +96,7 @@ class SimpleNetworkClient :
     def authenticate(self, p, pw) : #credentials sent in plaintext!
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         key, salt = self.scrypt_PBKDF(pw=b"!Q#E%T&U8i6y4r2w", transmit_mode=b"1")
-        command = bytearray(b'AUTH ') #PBKDF function parameters cannot be encrypted because it will be used to generate the decryption key on the server
+        command = bytearray(b'AUTH defaultuser0 ') #PBKDF function parameters cannot be encrypted because it will be used to generate the decryption key on the server
         command.extend(pw)
         nonce, encrypted_msg, tag = self.AES_encrypt(key, command)
         print("Session key for encryption:")
@@ -117,6 +119,7 @@ class SimpleNetworkClient :
 
         #session_key, salt = self.scrypt_PBKDF(pw=b"!Q#E%T&U8i6y4r2w", transmit_mode=b"2", salt=salt)
         plaintext = self.AES_decrypt(key, cmds[1], cmds[0], cmds[2]) #a token is returned if authentication was successful
+        print("authenticate plaintext return type: " + str(type(plaintext)))
         return plaintext
 
     def updateInfTemp(self, frame) :
@@ -141,6 +144,9 @@ class SimpleNetworkClient :
         self.incLn.set_data(range(30), self.incTemps)
         return self.incLn,
     
+
+
+        
 snc = SimpleNetworkClient(23456, 23457)
 
 plt.grid()
